@@ -170,6 +170,7 @@ enum {
     EXCP_SYSCALL  = 0xc,
     EXCP_FPE      = 0xd,
     EXCP_TRAP     = 0xe,
+    EXCP_CUSTOM   = 0x19,
     EXCP_NR,
 };
 
@@ -419,6 +420,7 @@ static inline int cpu_mmu_index(CPUOpenRISCState *env)
 }
 
 #define CPU_INTERRUPT_TIMER   CPU_INTERRUPT_TGT_INT_0
+#define CPU_INTERRUPT_CUSTOM   CPU_INTERRUPT_TGT_INT_1 /* set up a custom interrupt - DRM */
 
 #include "exec/exec-all.h"
 

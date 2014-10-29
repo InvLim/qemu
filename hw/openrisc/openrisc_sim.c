@@ -31,6 +31,58 @@
 
 #define KERNEL_LOAD_ADDR 0x100
 
+// Here's some testing code for memory-mapped io
+uint64_t mmio_test_read(void* opaque, hwaddr addr, unsigned size);
+void mmio_test_write(void* opaque, hwaddr addr, uint64_t data, unsigned size);
+static void custom_mmio_test(void* opaque, MemoryRegion *address_space, hwaddr addr);
+
+// Define our callback functions
+static const MemoryRegionOps custom_mmio_ops = {
+    .read = &mmio_test_read,
+    .write = &mmio_test_write,
+    .impl = { .min_access_size = 1, .max_access_size = 1},
+    .endianness = DEVICE_BIG_ENDIAN,
+};
+
+// Set up a new memory region 
+static MemoryRegion custom_mmio;
+
+// Read callback function for MMIO
+uint64_t mmio_test_read(void* opaque, hwaddr addr, unsigned size)
+{
+    switch (addr)
+    {
+        // Address is relative, not absolute; so an addres of '0x1' is 1 byte off from
+        // the start of the MMIO region
+        case 0: printf("read addr 0\n"); break;
+        case 1: printf("read addr 1\n"); break;
+        case 2: printf("read addr 2\n"); break;
+        case 3: printf("read addr 3\n"); break;
+        case 4: printf("read addr 4\n"); break;
+    }
+    return 0;
+}
+
+// Write callback function for MMIO
+void mmio_test_write(void* opaque, hwaddr addr, uint64_t data, unsigned size)
+{
+    // Here we trigger a custom interrupt
+    OpenRISCCPU *cpu = opaque;
+    CPUState *cs = CPU(cpu);
+    cs->interrupt_request |= CPU_INTERRUPT_CUSTOM;
+
+    // Output the data that was written to the MMIO region
+    printf("Writing %c!\n", (int)data);
+}
+
+// Initialize the memory-mapped IO region and add it to the address space
+static void custom_mmio_test(void *opaque, MemoryRegion *address_space, hwaddr addr)
+{
+    // Initialize 5 bytes of MMIO region
+    memory_region_init_io(&custom_mmio, NULL, &custom_mmio_ops, opaque, "mmio_test", 0x5);
+    memory_region_add_subregion(address_space, addr, &custom_mmio);
+}   
+
 static void main_cpu_reset(void *opaque)
 {
     OpenRISCCPU *cpu = opaque;
@@ -128,6 +180,8 @@ static void openrisc_sim_init(MachineState *machine)
         openrisc_sim_net_init(get_system_memory(), 0x92000000,
                               0x92000400, cpu->env.irq[4], nd_table);
     }
+    
+    custom_mmio_test(cpu, get_system_memory(), 0xc0ffee11);
 
     cpu_openrisc_load_kernel(ram_size, kernel_filename, cpu);
 }

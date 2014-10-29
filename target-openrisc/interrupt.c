@@ -76,6 +76,12 @@ bool openrisc_cpu_exec_interrupt(CPUState *cs, int interrupt_request)
     if ((interrupt_request & CPU_INTERRUPT_TIMER) && (env->sr & SR_TEE)) {
         idx = EXCP_TICK;
     }
+
+	// Here's where we set our custom interrupt; I can trace execution to here in GDB,
+	// but FreeRTOS doesn't know what to do with this interrupt so it freaks out - DRM
+    if ((interrupt_request & CPU_INTERRUPT_CUSTOM) && (env->sr & SR_IEE)) {
+        idx = EXCP_CUSTOM;
+    }
     if (idx >= 0) {
         cs->exception_index = idx;
         openrisc_cpu_do_interrupt(cs);
